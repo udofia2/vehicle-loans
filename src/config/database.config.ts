@@ -12,6 +12,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       database: ':memory:', // In-memory SQLite database
       entities: [Vehicle, Valuation, LoanApplication],
       synchronize: true, // Auto-sync schema (only for development/demo)
+      dropSchema: true, // Drop schema on startup to avoid index conflicts
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
     };
