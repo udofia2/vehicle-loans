@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { TypeOrmLoanApplicationRepository } from '../repositories/loan-application.repository';
 import { VehicleService } from '../../vehicle/services/vehicle.service';
 import { ValuationService } from '../../valuation/services/valuation.service';
@@ -7,7 +11,11 @@ import { CreateLoanApplicationDto } from '../dto/create-loan-application.dto';
 import { UpdateLoanApplicationDto } from '../dto/update-loan-application.dto';
 import { LoanApplicationStatus } from '../../../common/enums';
 import { LoanCalculatorUtil } from '../../../common/utils/loan-calculator.util';
-import { LoanCalculation, PaginatedResponse, PaginationOptions } from '../../../common/types';
+import {
+  LoanCalculation,
+  PaginatedResponse,
+  PaginationOptions,
+} from '../../../common/types';
 
 @Injectable()
 export class LoanApplicationService {
@@ -48,7 +56,10 @@ export class LoanApplicationService {
     }
 
     // Validate loan term
-    this.validateLoanTerms(createLoanDto.interestRate, createLoanDto.termMonths);
+    this.validateLoanTerms(
+      createLoanDto.interestRate,
+      createLoanDto.termMonths,
+    );
 
     return await this.loanRepository.create({
       ...createLoanDto,
@@ -75,8 +86,13 @@ export class LoanApplicationService {
     const loan = await this.getLoanApplicationById(id);
 
     // If updating loan amount, validate against current valuation
-    if (updateLoanDto.loanAmount && updateLoanDto.loanAmount !== loan.loanAmount) {
-      const valuation = await this.valuationService.getValuationById(loan.valuationId);
+    if (
+      updateLoanDto.loanAmount &&
+      updateLoanDto.loanAmount !== loan.loanAmount
+    ) {
+      const valuation = await this.valuationService.getValuationById(
+        loan.valuationId,
+      );
       const loanValidation = LoanCalculatorUtil.validateLoanCriteria(
         updateLoanDto.loanAmount,
         valuation.estimatedValue,
@@ -111,10 +127,12 @@ export class LoanApplicationService {
     await this.loanRepository.delete(id);
   }
 
-  async getLoanApplicationsByVehicleId(vehicleId: string): Promise<LoanApplication[]> {
+  async getLoanApplicationsByVehicleId(
+    vehicleId: string,
+  ): Promise<LoanApplication[]> {
     // Validate that the vehicle exists
     await this.vehicleService.validateVehicleExists(vehicleId);
-    
+
     return await this.loanRepository.findByVehicleId(vehicleId);
   }
 
@@ -124,10 +142,12 @@ export class LoanApplicationService {
     return await this.loanRepository.findByStatus(status);
   }
 
-  async getLoanApplicationsByValuationId(valuationId: string): Promise<LoanApplication[]> {
+  async getLoanApplicationsByValuationId(
+    valuationId: string,
+  ): Promise<LoanApplication[]> {
     // Validate that the valuation exists
     await this.valuationService.validateValuationExists(valuationId);
-    
+
     return await this.loanRepository.findByValuationId(valuationId);
   }
 
@@ -138,7 +158,7 @@ export class LoanApplicationService {
     if (startDate > endDate) {
       throw new BadRequestException('Start date must be before end date');
     }
-    
+
     return await this.loanRepository.findByDateRange(startDate, endDate);
   }
 
@@ -150,7 +170,7 @@ export class LoanApplicationService {
 
   async calculateLoanPayment(id: string): Promise<LoanCalculation> {
     const loan = await this.getLoanApplicationById(id);
-    
+
     return LoanCalculatorUtil.calculateLoanPayment(
       loan.loanAmount,
       loan.interestRate,
@@ -160,7 +180,7 @@ export class LoanApplicationService {
 
   async generatePaymentSchedule(id: string): Promise<LoanCalculation> {
     const loan = await this.getLoanApplicationById(id);
-    
+
     return LoanCalculatorUtil.generatePaymentSchedule(
       loan.loanAmount,
       loan.interestRate,
@@ -182,11 +202,13 @@ export class LoanApplicationService {
 
   async cancelLoanApplication(id: string): Promise<LoanApplication> {
     const loan = await this.getLoanApplicationById(id);
-    
+
     if (loan.status === LoanApplicationStatus.APPROVED) {
-      throw new BadRequestException('Cannot cancel an approved loan application');
+      throw new BadRequestException(
+        'Cannot cancel an approved loan application',
+      );
     }
-    
+
     return await this.updateLoanStatus(id, LoanApplicationStatus.CANCELLED);
   }
 
@@ -196,7 +218,14 @@ export class LoanApplicationService {
     }
 
     if (termMonths < 12 || termMonths > 84) {
-      throw new BadRequestException('Loan term must be between 12 and 84 months');
+      throw new BadRequestException(
+        'Loan term must be between 12 and 84 months',
+      );
     }
+  }
+
+  // Helper method for other services
+  async validateLoanApplicationExists(id: string): Promise<LoanApplication> {
+    return await this.getLoanApplicationById(id);
   }
 }

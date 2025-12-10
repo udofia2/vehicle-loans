@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
@@ -40,7 +41,7 @@ export class LoanApplication {
 
   @ApiProperty({
     description: 'Requested loan amount',
-    example: 20000.00,
+    example: 20000.0,
   })
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   loanAmount: number;
@@ -103,4 +104,7 @@ export class LoanApplication {
   })
   @JoinColumn({ name: 'valuationId' })
   valuation: Valuation;
+
+  @OneToMany('Offer', 'loanApplication', { lazy: true })
+  offers: Promise<any[]>;
 }

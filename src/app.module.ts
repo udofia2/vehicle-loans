@@ -6,6 +6,7 @@ import { validationSchema } from './config/validation.schema';
 import { VehicleModule } from './modules/vehicle/vehicle.module';
 import { ValuationModule } from './modules/valuation/valuation.module';
 import { LoanModule } from './modules/loan/loan.module';
+import { OfferModule } from './modules/offers/offer.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { LoanModule } from './modules/loan/loan.module';
     VehicleModule,
     ValuationModule,
     LoanModule,
+    OfferModule,
   ],
 })
 export class AppModule {}

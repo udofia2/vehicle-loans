@@ -36,3 +36,10 @@ export enum ValuationSource {
   MANUAL = 'manual',
   EXTERNAL_API = 'external_api',
 }
+
+export enum OfferStatus {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  ACCEPTED = 'accepted',
+  DECLINED = 'declined',
+}
