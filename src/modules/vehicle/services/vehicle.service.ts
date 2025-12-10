@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { VehicleRepository } from '../interfaces/vehicle-repository.interface';
 import { TypeOrmVehicleRepository } from '../repositories/vehicle.repository';
 import { Vehicle } from '../entities/vehicle.entity';
@@ -6,6 +11,8 @@ import { CreateVehicleDto } from '../dto/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dto/update-vehicle.dto';
 import { SearchVehicleDto } from '../dto/search-vehicle.dto';
 import { VinValidatorUtil } from '../../../common/utils/vin-validator.util';
+import { VinLookupService } from './vin-lookup.service';
+import { TransmissionType, FuelType } from '../../../common/enums';
 import {
   VehicleSearchCriteria,
   PaginatedResponse,
@@ -14,34 +21,114 @@ import {
 
 @Injectable()
 export class VehicleService {
-  constructor(private readonly vehicleRepository: TypeOrmVehicleRepository) {}
+  private readonly logger = new Logger(VehicleService.name);
+
+  constructor(
+    private readonly vehicleRepository: TypeOrmVehicleRepository,
+    private readonly vinLookupService: VinLookupService,
+  ) {}
 
   async createVehicle(createVehicleDto: CreateVehicleDto): Promise<Vehicle> {
-    // Validate VIN
+    // Validate VIN format first
     const vinValidation = VinValidatorUtil.validateVin(createVehicleDto.vin);
     if (!vinValidation.isValid) {
       throw new ConflictException(`Invalid VIN: ${vinValidation.reason}`);
     }
 
     // Check if VIN already exists
-    const existingVehicle = await this.vehicleRepository.findByVin(createVehicleDto.vin);
+    const existingVehicle = await this.vehicleRepository.findByVin(
+      createVehicleDto.vin,
+    );
     if (existingVehicle) {
       throw new ConflictException('Vehicle with this VIN already exists');
     }
 
-    // Auto-populate manufacturer from VIN if not provided or different
-    const vinManufacturer = VinValidatorUtil.getManufacturerFromVin(createVehicleDto.vin);
-    if (vinManufacturer && vinManufacturer.toLowerCase() !== createVehicleDto.make.toLowerCase()) {
-      console.warn(`VIN suggests manufacturer: ${vinManufacturer}, but provided: ${createVehicleDto.make}`);
+    // Try to decode VIN and enrich vehicle data
+    let enrichedData = { ...createVehicleDto };
+
+    try {
+      this.logger.log(`Attempting VIN lookup for: ${createVehicleDto.vin}`);
+      const vinData = await this.vinLookupService.lookupVin(
+        createVehicleDto.vin,
+      );
+
+      if (vinData.isValid) {
+        // Use VIN data to fill missing fields or validate provided data
+        enrichedData = {
+          ...createVehicleDto,
+          make: createVehicleDto.make || vinData.make,
+          model: createVehicleDto.model || vinData.model,
+          year: createVehicleDto.year || vinData.year,
+          transmission:
+            createVehicleDto.transmission ||
+            this.mapTransmissionType(vinData.transmission),
+          fuelType:
+            createVehicleDto.fuelType || this.mapFuelType(vinData.fuelType),
+          color:
+            createVehicleDto.color || vinData.color || createVehicleDto.color,
+        };
+
+        // Log any discrepancies between provided and VIN data
+        this.logVinDiscrepancies(createVehicleDto, vinData);
+      } else {
+        this.logger.warn(
+          `VIN lookup returned invalid data for: ${createVehicleDto.vin}`,
+          vinData.errors,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `VIN lookup failed for: ${createVehicleDto.vin}`,
+        error.message,
+      );
+      // Continue with provided data if VIN lookup fails
     }
 
-    // Auto-populate year from VIN if not provided or different
-    const vinYear = VinValidatorUtil.getModelYearFromVin(createVehicleDto.vin);
-    if (vinYear && vinYear !== createVehicleDto.year) {
-      console.warn(`VIN suggests year: ${vinYear}, but provided: ${createVehicleDto.year}`);
+    return await this.vehicleRepository.create(enrichedData);
+  }
+
+  private logVinDiscrepancies(
+    providedData: CreateVehicleDto,
+    vinData: any,
+  ): void {
+    if (
+      providedData.make &&
+      providedData.make.toLowerCase() !== vinData.make.toLowerCase()
+    ) {
+      this.logger.warn(
+        `VIN suggests make: ${vinData.make}, but provided: ${providedData.make}`,
+      );
+    }
+    if (
+      providedData.model &&
+      providedData.model.toLowerCase() !== vinData.model.toLowerCase()
+    ) {
+      this.logger.warn(
+        `VIN suggests model: ${vinData.model}, but provided: ${providedData.model}`,
+      );
+    }
+    if (providedData.year && providedData.year !== vinData.year) {
+      this.logger.warn(
+        `VIN suggests year: ${vinData.year}, but provided: ${providedData.year}`,
+      );
+    }
+  }
+
+  /**
+   * Decode VIN and return vehicle information without saving
+   */
+  async decodeVin(vin: string) {
+    const vinValidation = VinValidatorUtil.validateVin(vin);
+    if (!vinValidation.isValid) {
+      throw new ConflictException(`Invalid VIN: ${vinValidation.reason}`);
     }
 
-    return await this.vehicleRepository.create(createVehicleDto);
+    try {
+      return await this.vinLookupService.lookupVin(vin);
+    } catch (error) {
+      this.logger.error(`VIN decode failed for: ${vin}`, error.message);
+      throw error;
+    }
   }
 
   async getVehicleById(id: string): Promise<Vehicle> {
@@ -64,7 +151,10 @@ export class VehicleService {
     return await this.vehicleRepository.findAll();
   }
 
-  async updateVehicle(id: string, updateVehicleDto: UpdateVehicleDto): Promise<Vehicle> {
+  async updateVehicle(
+    id: string,
+    updateVehicleDto: UpdateVehicleDto,
+  ): Promise<Vehicle> {
     const vehicle = await this.getVehicleById(id);
 
     // If VIN is being updated, validate it
@@ -75,7 +165,9 @@ export class VehicleService {
       }
 
       // Check if new VIN already exists
-      const existingVehicle = await this.vehicleRepository.findByVin(updateVehicleDto.vin);
+      const existingVehicle = await this.vehicleRepository.findByVin(
+        updateVehicleDto.vin,
+      );
       if (existingVehicle && existingVehicle.id !== id) {
         throw new ConflictException('Vehicle with this VIN already exists');
       }
@@ -89,7 +181,9 @@ export class VehicleService {
     await this.vehicleRepository.delete(id);
   }
 
-  async searchVehicles(searchDto: SearchVehicleDto): Promise<PaginatedResponse<Vehicle>> {
+  async searchVehicles(
+    searchDto: SearchVehicleDto,
+  ): Promise<PaginatedResponse<Vehicle>> {
     const criteria: VehicleSearchCriteria = {
       make: searchDto.make,
       model: searchDto.model,
@@ -109,7 +203,10 @@ export class VehicleService {
     }
 
     // Handle mileage range
-    if (searchDto.mileageMin !== undefined || searchDto.mileageMax !== undefined) {
+    if (
+      searchDto.mileageMin !== undefined ||
+      searchDto.mileageMax !== undefined
+    ) {
       criteria.mileageRange = {
         min: searchDto.mileageMin || 0,
         max: searchDto.mileageMax || Number.MAX_SAFE_INTEGER,
@@ -126,11 +223,17 @@ export class VehicleService {
     return await this.vehicleRepository.searchVehicles(criteria, pagination);
   }
 
-  async getVehiclesByMakeAndModel(make: string, model: string): Promise<Vehicle[]> {
+  async getVehiclesByMakeAndModel(
+    make: string,
+    model: string,
+  ): Promise<Vehicle[]> {
     return await this.vehicleRepository.findByMakeAndModel(make, model);
   }
 
-  async getVehiclesByYearRange(minYear: number, maxYear: number): Promise<Vehicle[]> {
+  async getVehiclesByYearRange(
+    minYear: number,
+    maxYear: number,
+  ): Promise<Vehicle[]> {
     return await this.vehicleRepository.findByYearRange(minYear, maxYear);
   }
 
@@ -140,5 +243,61 @@ export class VehicleService {
 
   async validateVehicleExists(id: string): Promise<Vehicle> {
     return await this.getVehicleById(id);
+  }
+
+  /**
+   * Map external API transmission type to our enum
+   */
+  private mapTransmissionType(externalType: string): TransmissionType {
+    if (!externalType) return TransmissionType.AUTOMATIC; // Default
+
+    const lowercaseType = externalType.toLowerCase();
+
+    if (lowercaseType.includes('manual') || lowercaseType.includes('stick')) {
+      return TransmissionType.MANUAL;
+    }
+    if (lowercaseType.includes('cvt')) {
+      return TransmissionType.CVT;
+    }
+    if (lowercaseType.includes('semi') || lowercaseType.includes('paddle')) {
+      return TransmissionType.SEMI_AUTOMATIC;
+    }
+
+    // Default to automatic for any unclear transmissions
+    return TransmissionType.AUTOMATIC;
+  }
+
+  /**
+   * Map external API fuel type to our enum
+   */
+  private mapFuelType(externalType: string): FuelType {
+    if (!externalType) return FuelType.GASOLINE; // Default
+
+    const lowercaseType = externalType.toLowerCase();
+
+    if (lowercaseType.includes('diesel')) {
+      return FuelType.DIESEL;
+    }
+    if (
+      lowercaseType.includes('electric') &&
+      !lowercaseType.includes('hybrid')
+    ) {
+      return FuelType.ELECTRIC;
+    }
+    if (lowercaseType.includes('plugin') || lowercaseType.includes('plug-in')) {
+      return FuelType.PLUGIN_HYBRID;
+    }
+    if (lowercaseType.includes('hybrid')) {
+      return FuelType.HYBRID;
+    }
+    if (
+      lowercaseType.includes('hydrogen') ||
+      lowercaseType.includes('fuel cell')
+    ) {
+      return FuelType.HYDROGEN;
+    }
+
+    // Default to gasoline for any unclear fuel types
+    return FuelType.GASOLINE;
   }
 }

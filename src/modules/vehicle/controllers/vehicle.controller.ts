@@ -25,7 +25,10 @@ import { Vehicle } from '../entities/vehicle.entity';
 import { CreateVehicleDto } from '../dto/create-vehicle.dto';
 import { UpdateVehicleDto } from '../dto/update-vehicle.dto';
 import { SearchVehicleDto } from '../dto/search-vehicle.dto';
-import { ApiResponseDto, PaginatedResponseDto } from '../../../common/dto/response.dto';
+import {
+  ApiResponseDto,
+  PaginatedResponseDto,
+} from '../../../common/dto/response.dto';
 
 @ApiTags('vehicles')
 @Controller('vehicles')
@@ -40,7 +43,9 @@ export class VehicleController {
     type: Vehicle,
   })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
-  async createVehicle(@Body() createVehicleDto: CreateVehicleDto): Promise<ApiResponseDto<Vehicle>> {
+  async createVehicle(
+    @Body() createVehicleDto: CreateVehicleDto,
+  ): Promise<ApiResponseDto<Vehicle>> {
     const vehicle = await this.vehicleService.createVehicle(createVehicleDto);
     return new ApiResponseDto(true, vehicle, 'Vehicle created successfully');
   }
@@ -52,10 +57,17 @@ export class VehicleController {
     description: 'Vehicles retrieved successfully',
     type: [Vehicle],
   })
-  async getVehicles(@Query() searchDto: SearchVehicleDto): Promise<ApiResponseDto<PaginatedResponseDto<Vehicle>>> {
+  async getVehicles(
+    @Query() searchDto: SearchVehicleDto,
+  ): Promise<ApiResponseDto<PaginatedResponseDto<Vehicle>>> {
     // If any search parameters are provided, use search; otherwise get all
-    const hasSearchParams = Object.keys(searchDto).some(key => 
-      key !== 'page' && key !== 'limit' && key !== 'sortBy' && key !== 'sortOrder' && searchDto[key as keyof SearchVehicleDto] !== undefined
+    const hasSearchParams = Object.keys(searchDto).some(
+      (key) =>
+        key !== 'page' &&
+        key !== 'limit' &&
+        key !== 'sortBy' &&
+        key !== 'sortOrder' &&
+        searchDto[key as keyof SearchVehicleDto] !== undefined,
     );
 
     if (hasSearchParams) {
@@ -67,9 +79,13 @@ export class VehicleController {
         vehicles,
         vehicles.length,
         1,
-        vehicles.length
+        vehicles.length,
       );
-      return new ApiResponseDto(true, paginatedResult, 'Vehicles retrieved successfully');
+      return new ApiResponseDto(
+        true,
+        paginatedResult,
+        'Vehicles retrieved successfully',
+      );
     }
   }
 
@@ -82,7 +98,9 @@ export class VehicleController {
     type: Vehicle,
   })
   @ApiNotFoundResponse({ description: 'Vehicle not found' })
-  async getVehicleById(@Param('id', ParseUUIDPipe) id: string): Promise<ApiResponseDto<Vehicle>> {
+  async getVehicleById(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ApiResponseDto<Vehicle>> {
     const vehicle = await this.vehicleService.getVehicleById(id);
     return new ApiResponseDto(true, vehicle, 'Vehicle retrieved successfully');
   }
@@ -96,9 +114,38 @@ export class VehicleController {
     type: Vehicle,
   })
   @ApiNotFoundResponse({ description: 'Vehicle not found' })
-  async getVehicleByVin(@Param('vin') vin: string): Promise<ApiResponseDto<Vehicle>> {
+  async getVehicleByVin(
+    @Param('vin') vin: string,
+  ): Promise<ApiResponseDto<Vehicle>> {
     const vehicle = await this.vehicleService.getVehicleByVin(vin);
     return new ApiResponseDto(true, vehicle, 'Vehicle retrieved successfully');
+  }
+
+  @Get('decode/:vin')
+  @ApiOperation({ summary: 'Decode VIN to get vehicle information' })
+  @ApiParam({
+    name: 'vin',
+    description: 'Vehicle VIN to decode',
+    type: 'string',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'VIN decoded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        vin: { type: 'string' },
+        make: { type: 'string' },
+        model: { type: 'string' },
+        year: { type: 'number' },
+        isValid: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'Invalid VIN format' })
+  async decodeVin(@Param('vin') vin: string): Promise<ApiResponseDto<any>> {
+    const vinData = await this.vehicleService.decodeVin(vin);
+    return new ApiResponseDto(true, vinData, 'VIN decoded successfully');
   }
 
   @Put(':id')
@@ -115,7 +162,10 @@ export class VehicleController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateVehicleDto: UpdateVehicleDto,
   ): Promise<ApiResponseDto<Vehicle>> {
-    const vehicle = await this.vehicleService.updateVehicle(id, updateVehicleDto);
+    const vehicle = await this.vehicleService.updateVehicle(
+      id,
+      updateVehicleDto,
+    );
     return new ApiResponseDto(true, vehicle, 'Vehicle updated successfully');
   }
 
@@ -142,8 +192,15 @@ export class VehicleController {
     @Query('make') make: string,
     @Query('model') model: string,
   ): Promise<ApiResponseDto<Vehicle[]>> {
-    const vehicles = await this.vehicleService.getVehiclesByMakeAndModel(make, model);
-    return new ApiResponseDto(true, vehicles, 'Vehicles retrieved successfully');
+    const vehicles = await this.vehicleService.getVehiclesByMakeAndModel(
+      make,
+      model,
+    );
+    return new ApiResponseDto(
+      true,
+      vehicles,
+      'Vehicles retrieved successfully',
+    );
   }
 
   @Get('search/year-range')
@@ -159,8 +216,15 @@ export class VehicleController {
     @Query('minYear') minYear: number,
     @Query('maxYear') maxYear: number,
   ): Promise<ApiResponseDto<Vehicle[]>> {
-    const vehicles = await this.vehicleService.getVehiclesByYearRange(minYear, maxYear);
-    return new ApiResponseDto(true, vehicles, 'Vehicles retrieved successfully');
+    const vehicles = await this.vehicleService.getVehiclesByYearRange(
+      minYear,
+      maxYear,
+    );
+    return new ApiResponseDto(
+      true,
+      vehicles,
+      'Vehicles retrieved successfully',
+    );
   }
 
   @Get('stats/count')
@@ -172,6 +236,10 @@ export class VehicleController {
   })
   async getVehicleCount(): Promise<ApiResponseDto<{ count: number }>> {
     const count = await this.vehicleService.getVehicleCount();
-    return new ApiResponseDto(true, { count }, 'Vehicle count retrieved successfully');
+    return new ApiResponseDto(
+      true,
+      { count },
+      'Vehicle count retrieved successfully',
+    );
   }
 }
