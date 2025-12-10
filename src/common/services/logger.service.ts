@@ -13,9 +13,12 @@ export class LoggerService implements NestLoggerService {
   private context?: string;
   private logLevel: LogLevel = LogLevel.INFO;
 
-  constructor(context?: string) {
-    this.context = context;
+  constructor() {
     this.setLogLevel();
+  }
+
+  setContext(context: string): void {
+    this.context = context;
   }
 
   private setLogLevel(): void {

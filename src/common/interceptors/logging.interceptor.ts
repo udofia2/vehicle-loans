@@ -11,7 +11,12 @@ import { LoggerService } from '../services/logger.service';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger = new LoggerService('HTTP');
+  private readonly logger: LoggerService;
+
+  constructor(logger: LoggerService) {
+    this.logger = logger;
+    this.logger.setContext('HTTP');
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     if (context.getType() === 'http') {

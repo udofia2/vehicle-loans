@@ -1,23 +1,32 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseConfig } from './config/database.config';
+import { DatabaseModule } from './database/database.module';
+import { CommonModule } from './common/common.module';
+import { validationSchema } from './config/validation.schema';
 import { VehicleModule } from './modules/vehicle/vehicle.module';
 import { ValuationModule } from './modules/valuation/valuation.module';
 import { LoanModule } from './modules/loan/loan.module';
 
 @Module({
   imports: [
+    // Global Configuration Module with validation
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: ['.env.development', '.env.local', '.env'],
+      validationSchema,
+      validationOptions: {
+        allowUnknown: true, // Allow unknown environment variables
+        abortEarly: false,
+      },
     }),
 
+    // Database Module
+    DatabaseModule,
 
-    TypeOrmModule.forRootAsync({
-      useClass: DatabaseConfig,
-    }),
+    // Common Module (global filters, interceptors, pipes)
+    CommonModule,
 
+    // Feature Modules
     VehicleModule,
     ValuationModule,
     LoanModule,

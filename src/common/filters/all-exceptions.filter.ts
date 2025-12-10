@@ -14,7 +14,7 @@ import { ERROR_MESSAGES } from '../constants/error-messages.constants';
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(private readonly logger: LoggerService) {
-    this.logger = new LoggerService('AllExceptionsFilter');
+    this.logger.setContext('AllExceptionsFilter');
   }
 
   catch(exception: unknown, host: ArgumentsHost): void {

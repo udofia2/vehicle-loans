@@ -1,11 +1,13 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const configService = app.get(ConfigService);
 
   // Enable CORS
   app.enableCors({
@@ -15,26 +17,15 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
-  );
-
-  // API prefix
-  app.setGlobalPrefix('api/v1');
+  // API prefix from config
+  const apiPrefix = configService.get('APP_PREFIX', 'api/v1');
+  app.setGlobalPrefix(apiPrefix);
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('AutoCheck Backend API')
+    .setTitle(configService.get('APP_NAME', 'AutoCheck Backend API'))
     .setDescription('Complete Vehicle Valuation and Loan Management System API')
-    .setVersion('1.0.0')
+    .setVersion(configService.get('APP_VERSION', '1.0.0'))
     .addTag('vehicles', 'Vehicle management operations')
     .addTag('valuations', 'Vehicle valuation operations')
     .addTag('loans', 'Loan application operations')
@@ -52,16 +43,22 @@ async function bootstrap() {
     customSiteTitle: 'AutoCheck API Documentation',
   });
 
-  const port = process.env.PORT ?? 3000;
+  const port = configService.get('PORT', 3000);
   await app.listen(port);
 
   console.log(
     `🚀 AutoCheck Backend API is running on: http://localhost:${port}`,
   );
   console.log(`📖 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(
+    `🔧 Environment: ${configService.get('NODE_ENV', 'development')}`,
+  );
+  console.log(
+    `💾 Database: ${configService.get('DB_TYPE', 'sqlite')} (${configService.get('DB_DATABASE', ':memory:')})`,
+  );
 }
 
 bootstrap().catch((error) => {
-  console.error('❌ Error starting the application:', error);
+  console.error('❌ Error starting the application:', error.stack || error);
   process.exit(1);
 });

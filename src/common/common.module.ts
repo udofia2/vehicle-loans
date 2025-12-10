@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 
 // Services
@@ -11,9 +11,6 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
 // Interceptors
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
-
-// Pipes
-import { ValidationPipe } from './pipes/validation.pipe';
 
 @Global()
 @Module({
@@ -41,10 +38,17 @@ import { ValidationPipe } from './pipes/validation.pipe';
       useClass: TransformInterceptor,
     },
 
-    // Global Pipes
+    // Global Validation Pipe
     {
       provide: APP_PIPE,
-      useClass: ValidationPipe,
+      useValue: new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
+      }),
     },
   ],
   exports: [LoggerService],
