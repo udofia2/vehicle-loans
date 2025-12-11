@@ -15,6 +15,5 @@ Thumbs.db
 *.swo
 *~
 api-architecture.md
-README.md
 package-lock.json
 test
