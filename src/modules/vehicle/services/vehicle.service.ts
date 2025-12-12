@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { VehicleRepository } from '../interfaces/vehicle-repository.interface';
@@ -32,7 +33,9 @@ export class VehicleService {
     // Validate VIN format first
     const vinValidation = VinValidatorUtil.validateVin(createVehicleDto.vin);
     if (!vinValidation.isValid) {
-      throw new ConflictException(`Invalid VIN: ${vinValidation.reason}`);
+      throw new BadRequestException(
+        `VIN Validation Error: ${vinValidation.reason}`,
+      );
     }
 
     // Check if VIN already exists
@@ -95,8 +98,8 @@ export class VehicleService {
   ): Promise<Vehicle> {
     const vinValidation = VinValidatorUtil.validateVin(createVehicleDto.vin);
     if (!vinValidation.isValid) {
-      throw new ConflictException(
-        `Invalid VIN format: ${vinValidation.reason}`,
+      throw new BadRequestException(
+        `VIN Validation Error: ${vinValidation.reason}`,
       );
     }
 
@@ -149,7 +152,9 @@ export class VehicleService {
   async decodeVin(vin: string) {
     const vinValidation = VinValidatorUtil.validateVin(vin);
     if (!vinValidation.isValid) {
-      throw new ConflictException(`Invalid VIN: ${vinValidation.reason}`);
+      throw new BadRequestException(
+        `VIN Validation Error: ${vinValidation.reason}`,
+      );
     }
 
     try {
@@ -190,7 +195,9 @@ export class VehicleService {
     if (updateVehicleDto.vin && updateVehicleDto.vin !== vehicle.vin) {
       const vinValidation = VinValidatorUtil.validateVin(updateVehicleDto.vin);
       if (!vinValidation.isValid) {
-        throw new ConflictException(`Invalid VIN: ${vinValidation.reason}`);
+        throw new BadRequestException(
+          `VIN Validation Error: ${vinValidation.reason}`,
+        );
       }
 
       // Check if new VIN already exists

@@ -46,7 +46,21 @@ export class VehicleController {
     description: 'Vehicle created successfully',
     type: Vehicle,
   })
-  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  @ApiBadRequestResponse({
+    description: 'Invalid input data or VIN validation failed',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: {
+          type: 'string',
+          example:
+            'VIN Validation Error: VIN check digit validation failed. Please verify the VIN is correct - the 9th character (check digit) does not match the calculated value for this VIN.',
+        },
+        error: { type: 'string', example: 'Bad Request' },
+      },
+    },
+  })
   @ApiResponse({
     status: 409,
     description: 'Vehicle with this VIN already exists',
