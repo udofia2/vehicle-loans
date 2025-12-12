@@ -42,58 +42,6 @@ vehicle-loans Backend API is a production-ready system for vehicle loan processi
 - **Competitive Rates**: Market-competitive interest rates
 - **Offer Management**: Accept, decline, and counter-offer functionality
 
-### 🔧 Technical Features
-
-- **RESTful API**: Clean, intuitive API design following REST principles
-- **Swagger Documentation**: Interactive API documentation with testing interface
-- **Type Safety**: Full TypeScript implementation with strict typing
-- **Database Management**: SQLite with TypeORM for development, production-ready
-- **Validation**: Comprehensive input validation using class-validator
-- **Error Handling**: Structured error responses with proper HTTP status codes
-- **Logging**: Structured logging with correlation IDs
-- **Testing**: Unit tests with Jest framework (27 tests, 8 test suites)
-- **Security**: CORS, input sanitization, and security headers
-
-## 🛠 Tech Stack
-
-### Backend Framework
-
-- **NestJS 11.x**: Modern, scalable Node.js framework
-- **TypeScript 5.x**: Static typing and modern JavaScript features
-- **RxJS**: Reactive programming support
-
-### Database & ORM
-
-- **SQLite3**: Lightweight, serverless database (in-memory for development)
-- **TypeORM 0.3.x**: Feature-rich Object-Relational Mapping
-- **Database Migrations**: Automated schema management
-
-### Validation & Transformation
-
-- **class-validator**: Decorator-based validation
-- **class-transformer**: Object transformation and serialization
-- **Joi**: Environment variable validation
-
-### Documentation & Testing
-
-- **Swagger/OpenAPI**: Interactive API documentation
-- **Jest**: JavaScript testing framework
-- **Supertest**: HTTP assertion library
-
-### External Integrations
-
-- **VIN Lookup API**: Vehicle identification number decoding
-- **Valuation API**: Real-time vehicle price estimation
-- **HTTP Client**: Axios for external API communication
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Node.js**: >= 18.0.0 (LTS recommended)
-- **npm**: >= 8.0.0
-- **Git**: For version control
-
 ### Installation
 
 ```bash
@@ -112,29 +60,6 @@ npm run build
 
 # Start development server with hot reload
 npm run start:dev
-```
-
-### Environment Configuration
-
-Update `.env` file with your configuration:
-
-```env
-# Application
-NODE_ENV=development
-PORT=3000
-APP_NAME=vehicle-loans Backend API
-APP_VERSION=1.0.0
-APP_PREFIX=api/v1
-
-# Database (SQLite in-memory for development)
-DB_TYPE=sqlite
-DB_DATABASE=:memory:
-DB_SYNCHRONIZE=true
-DB_LOGGING=true
-
-# External APIs (obtain from providers)
-VIN_API_KEY=your_vin_api_key
-VALUATION_API_KEY=your_valuation_api_key
 ```
 
 ### 📋 Available Scripts
